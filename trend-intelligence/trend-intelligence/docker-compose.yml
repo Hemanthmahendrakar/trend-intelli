@@ -1,0 +1,57 @@
+# Full stack: PostgreSQL + collector worker + API + dashboard.
+# Usage: cp .env.example .env  (set POSTGRES_PASSWORD, Reddit keys)  &&  docker compose up --build
+
+x-app-env: &app-env
+  DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-trend}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-trendintel}
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-trend}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-trendintel}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trend} -d ${POSTGRES_DB:-trendintel}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  worker:
+    build: .
+    env_file: .env
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "trendintel init-db && trendintel run --every-minutes 30"]
+    restart: unless-stopped
+
+  api:
+    build: .
+    env_file: .env
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  dashboard:
+    build: .
+    environment:
+      API_BASE_URL: http://api:8000
+    depends_on:
+      - api
+    command: ["streamlit", "run", "src/trendintel/dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

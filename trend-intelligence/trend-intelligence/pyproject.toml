@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trendintel"
+version = "0.1.0"
+description = "Internet Trend Intelligence System: collect, process, score and display what is trending online."
+requires-python = ">=3.10"
+dependencies = [
+  "requests>=2.31",
+  "beautifulsoup4>=4.12",
+  "defusedxml>=0.7",
+  "pandas>=2.0",
+  "SQLAlchemy>=2.0",
+  "psycopg2-binary>=2.9",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "streamlit>=1.32",
+  "python-dotenv>=1.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "httpx>=0.27"]
+browser = ["playwright>=1.42"]   # only if a future source needs JS rendering
+
+[project.scripts]
+trendintel = "trendintel.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"trendintel.db" = ["schema.sql"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
